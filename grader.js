@@ -38,10 +38,21 @@ var assertFileExists = function(infile) {
     return instr;
 };
 
-var assertURLExists = function(infile) {
-  //  var instr = infile.toString();
-    return infile;
+var assertURLExists = function(inURL) {
+    rest.get(inURL).on('complete', function(result, response) {
+    if (result instanceof Error) {
+        console.log("URL error. Exiting.");
+        process.exit(1); // http://nodejs.org/api/process.html#process_process_exit_code
+      this.retry(5000); // try again after 5 sec
+    } 
+    else {
+      fs.writeFile("temp.html", result);
+      console.log(fs.readFileSync('temp.html').toString());
+      return checkHtmlFile("temp.html", checker);
+    }
+  });
 };
+    
 
 var cheerioHtmlFile = function(htmlfile) {
     return cheerio.load(fs.readFileSync(htmlfile));
@@ -68,27 +79,15 @@ var clone = function(fn) {
     return fn.bind({});
 };
 
-var checkURL = function(url, checker) {
-  rest.get(url).on('complete', function(result, response) {
-    if (result instanceof Error) {
-//      sys.puts('Error: ' + result.message);
-      this.retry(5000); // try again after 5 sec
-    } else {
-      fs.writeFile("temp.html", result);
-      return checkHtmlFile("temp.html", checker);
-    }
-  });
-};
 
 if(require.main == module) {
     program
         .option('-c, --checks <check_file>', 'Path to checks.json', clone(assertFileExists), CHECKSFILE_DEFAULT)
         .option('-f, --file <html_file>', 'Path to index.html', clone(assertFileExists), HTMLFILE_DEFAULT)
-        .option('-u, --url <url_file>', 'URL to check', clone(assertURLExists), URLFILE_DEFAULT)
+        .option('-u, --url <url_file>', 'URL to check')
         .parse(process.argv);
     if(program.url) {
-      console.log('Made it here: ', + program.url); 
-      var checkJson = checkURL(program.url, program.checks);
+      var checkJson = checkHtmlFile("temp.html", program.checks);
     }
     else {
       var checkJson = checkHtmlFile(program.file, program.checks);
