@@ -27,6 +27,7 @@ var program = require('commander');
 var cheerio = require('cheerio');
 var HTMLFILE_DEFAULT = "index.html";
 var CHECKSFILE_DEFAULT = "checks.json";
+var URLFILE_DEFAULT = "";
 
 var assertFileExists = function(infile) {
     var instr = infile.toString();
@@ -35,6 +36,11 @@ var assertFileExists = function(infile) {
         process.exit(1); // http://nodejs.org/api/process.html#process_process_exit_code
     }
     return instr;
+};
+
+var assertURLExists = function(infile) {
+  //  var instr = infile.toString();
+    return infile;
 };
 
 var cheerioHtmlFile = function(htmlfile) {
@@ -65,10 +71,11 @@ var clone = function(fn) {
 var checkURL = function(url, checker) {
   rest.get(url).on('complete', function(result, response) {
     if (result instanceof Error) {
-      sys.puts('Error: ' + result.message);
+//      sys.puts('Error: ' + result.message);
       this.retry(5000); // try again after 5 sec
     } else {
-      return checkHtmlFile(response, checker);
+      fs.writeFile("temp.html", result);
+      return checkHtmlFile("temp.html", checker);
     }
   });
 };
@@ -77,9 +84,10 @@ if(require.main == module) {
     program
         .option('-c, --checks <check_file>', 'Path to checks.json', clone(assertFileExists), CHECKSFILE_DEFAULT)
         .option('-f, --file <html_file>', 'Path to index.html', clone(assertFileExists), HTMLFILE_DEFAULT)
-        .option('-u, --url <url_name>', 'URL to check', website)
+        .option('-u, --url <url_file>', 'URL to check', clone(assertURLExists), URLFILE_DEFAULT)
         .parse(process.argv);
     if(program.url) {
+      console.log('Made it here: ', + program.url); 
       var checkJson = checkURL(program.url, program.checks);
     }
     else {
